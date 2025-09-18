@@ -1,0 +1,27 @@
+{
+  "name": "langchain-rag-openai",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.891.0",
+    "@aws-sdk/s3-request-presigner": "^3.891.0",
+    "@langchain/community": "^0.3.56",
+    "@langchain/openai": "^0.6.13",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "faiss-node": "^0.5.1",
+    "langchain": "^0.3.34",
+    "mammoth": "^1.10.0",
+    "morgan": "^1.10.1",
+    "pdf-parse": "^1.1.1"
+  }
+}

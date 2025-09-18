@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>기업 RAG 챗봇</title>
+    <style>
+      /* 기본 스타일 리셋 */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f7fb;
+        color: #333;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        grid-template-rows: auto 1fr;
+        grid-gap: 20px;
+        height: 100vh;
+      }
+
+      header {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      header h1 {
+        font-size: 1.8rem;
+        color: #2c3e50;
+      }
+
+      .status-container {
+        display: flex;
+        align-items: center;
+      }
+
+      .status-label {
+        margin-right: 10px;
+        font-weight: 500;
+      }
+
+      .status-indicator {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.9rem;
+        background-color: #e0e0e0;
+      }
+
+      .status-indicator.online {
+        background-color: #d4edda;
+        color: #155724;
+      }
+
+      .status-indicator.offline {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+
+      .chat-container {
+        grid-column: 1;
+        display: flex;
+        flex-direction: column;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+      }
+
+      .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      .message {
+        margin-bottom: 20px;
+        max-width: 80%;
+      }
+
+      .message.user {
+        margin-left: auto;
+        background-color: #e3f2fd;
+        border-radius: 18px 18px 0 18px;
+        padding: 12px 16px;
+      }
+
+      .message.bot {
+        margin-right: auto;
+        background-color: #f5f5f5;
+        border-radius: 18px 18px 18px 0;
+        padding: 12px 16px;
+      }
+
+      .message-content {
+        margin-bottom: 5px;
+      }
+
+      .sources {
+        font-size: 0.8rem;
+        margin-top: 8px;
+        color: #555;
+      }
+
+      .source-item {
+        margin-bottom: 3px;
+      }
+
+      .input-container {
+        display: flex;
+        padding: 15px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      #user-input {
+        flex: 1;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+        outline: none;
+      }
+
+      #user-input:focus {
+        border-color: #2196f3;
+      }
+
+      #send-button {
+        margin-left: 10px;
+        padding: 0 20px;
+        background-color: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background-color 0.2s;
+      }
+
+      #send-button:hover {
+        background-color: #0d8bf2;
+      }
+
+      .document-panel {
+        grid-column: 2;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .panel-header {
+        padding: 15px;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        align-items: center;
+      }
+
+      .panel-header h2 {
+        font-size: 1.2rem;
+        flex: 1;
+      }
+
+      .panel-header button {
+        padding: 6px 12px;
+        background-color: #f0f0f0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        margin-left: 10px;
+        transition: background-color 0.2s;
+      }
+
+      .panel-header button:hover {
+        background-color: #e0e0e0;
+      }
+
+      #reindex-button {
+        background-color: #ff9800;
+        color: white;
+      }
+
+      #reindex-button:hover {
+        background-color: #e68900;
+      }
+
+      .document-list {
+        flex: 1;
+        padding: 15px;
+        overflow-y: auto;
+      }
+
+      .document-item {
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 4px;
+        background-color: #f9f9f9;
+        border-left: 3px solid #2196f3;
+      }
+
+      .document-name {
+        font-weight: 500;
+        margin-bottom: 5px;
+        word-break: break-all;
+      }
+
+      .document-info {
+        font-size: 0.8rem;
+        color: #666;
+      }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        color: #666;
+      }
+
+      .error-message {
+        color: #d32f2f;
+        padding: 10px;
+        background-color: #ffebee;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr auto;
+        }
+
+        .chat-container {
+          grid-column: 1;
+          grid-row: 2;
+        }
+
+        .document-panel {
+          grid-column: 1;
+          grid-row: 3;
+          max-height: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>기업 문서 기반 RAG 챗봇</h1>
+        <div class="status-container">
+          <span class="status-label">상태:</span>
+          <span id="status-indicator" class="status-indicator">확인 중...</span>
+        </div>
+      </header>
+
+      <div class="chat-container">
+        <div id="chat-messages" class="chat-messages"></div>
+
+        <div class="input-container">
+          <input
+            type="text"
+            id="user-input"
+            placeholder="질문을 입력하세요..."
+            autocomplete="off"
+          />
+          <button id="send-button">전송</button>
+        </div>
+      </div>
+
+      <div class="document-panel">
+        <div class="panel-header">
+          <h2>문서 목록</h2>
+          <button id="refresh-docs-button">새로고침</button>
+          <button id="reindex-button">재색인화</button>
+        </div>
+        <div id="document-list" class="document-list">
+          <p>문서 목록을 로딩 중입니다...</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // public/js/main.js
+      document.addEventListener("DOMContentLoaded", () => {
+        // DOM 요소
+        const chatMessages = document.getElementById("chat-messages");
+        const userInput = document.getElementById("user-input");
+        const sendButton = document.getElementById("send-button");
+        const documentList = document.getElementById("document-list");
+        const refreshDocsButton = document.getElementById(
+          "refresh-docs-button"
+        );
+        const reindexButton = document.getElementById("reindex-button");
+        const statusIndicator = document.getElementById("status-indicator");
+
+        // API 엔드포인트 - 개발/프로덕션 환경에 따라 자동 설정
+        const API_URL =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1"
+            ? "http://localhost:3000/api"
+            : "/api";
+
+        // 초기화
+        checkStatus();
+        loadDocuments();
+
+        // API 응답 검증 헬퍼 함수
+        async function validateApiResponse(response) {
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error(
+              "API 서버가 실행되지 않았거나 잘못된 응답을 반환했습니다. 백엔드 서버를 확인해주세요."
+            );
+          }
+
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`API 오류 (${response.status}): ${text}`);
+          }
+
+          return response.json();
+        }
+
+        // 상태 확인
+        async function checkStatus() {
+          try {
+            statusIndicator.textContent = "연결 확인 중...";
+            statusIndicator.className = "status-indicator offline";
+
+            const response = await fetch(`${API_URL}/status`, {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+              },
+              // 타임아웃 설정
+              signal: AbortSignal.timeout(5000),
+            });
+
+            const data = await validateApiResponse(response);
+
+            if (data.status === "operational") {
+              statusIndicator.textContent = data.initialized
+                ? "온라인"
+                : "문서 색인화 필요";
+              statusIndicator.className = data.initialized
+                ? "status-indicator online"
+                : "status-indicator offline";
+            } else {
+              statusIndicator.textContent = "서비스 점검 중";
+              statusIndicator.className = "status-indicator offline";
+            }
+          } catch (error) {
+            console.error("상태 확인 오류:", error);
+            statusIndicator.textContent = "API 서버 연결 실패";
+            statusIndicator.className = "status-indicator offline";
+
+            // 사용자에게 명확한 안내 메시지 표시
+            if (error.name === "AbortError") {
+              statusIndicator.textContent = "연결 시간 초과";
+            } else if (error.message.includes("API 서버가 실행되지 않았거나")) {
+              statusIndicator.textContent = "API 서버 미실행";
+            }
+          }
+        }
+
+        // 문서 목록 로드
+        async function loadDocuments() {
+          try {
+            documentList.innerHTML =
+              '<div class="loading">문서 목록을 로딩 중입니다...</div>';
+
+            const response = await fetch(`${API_URL}/documents`, {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+              },
+              signal: AbortSignal.timeout(10000),
+            });
+
+            const data = await validateApiResponse(response);
+
+            if (data.count === 0) {
+              documentList.innerHTML =
+                "<p>문서가 없습니다. S3 버킷에 문서를 업로드해주세요.</p>";
+              return;
+            }
+
+            let html = "";
+            data.documents.forEach((doc) => {
+              // 파일 크기 단위 변환
+              const size = formatFileSize(doc.size);
+              // 날짜 포맷팅
+              const date = new Date(doc.lastModified).toLocaleString();
+
+              html += `
+                    <div class="document-item">
+                        <div class="document-name">${doc.name}</div>
+                        <div class="document-info">크기: ${size} | 수정일: ${date}</div>
+                    </div>
+                `;
+            });
+
+            documentList.innerHTML = html;
+          } catch (error) {
+            console.error("문서 로드 오류:", error);
+
+            if (error.message.includes("API 서버가 실행되지 않았거나")) {
+              documentList.innerHTML = `
+                    <div class="error-message">
+                        <strong>API 서버에 연결할 수 없습니다.</strong><br>
+                        백엔드 서버가 실행 중인지 확인해주세요.<br>
+                        <small>예상 주소: ${API_URL}</small>
+                    </div>
+                `;
+            } else {
+              documentList.innerHTML = `<div class="error-message">문서를 로드하는 중 오류가 발생했습니다: ${error.message}</div>`;
+            }
+          }
+        }
+
+        // 재색인화
+        async function reindexDocuments() {
+          try {
+            reindexButton.disabled = true;
+            reindexButton.textContent = "재색인화 중...";
+
+            const response = await fetch(`${API_URL}/reindex`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              signal: AbortSignal.timeout(30000), // 재색인화는 시간이 오래 걸릴 수 있음
+            });
+
+            const data = await validateApiResponse(response);
+            alert(data.message);
+
+            // 상태와 문서 목록 새로고침
+            checkStatus();
+            loadDocuments();
+          } catch (error) {
+            console.error("재색인화 오류:", error);
+            alert(`재색인화 중 오류가 발생했습니다: ${error.message}`);
+          } finally {
+            reindexButton.disabled = false;
+            reindexButton.textContent = "재색인화";
+          }
+        }
+
+        // 메시지 전송
+        async function sendMessage() {
+          const query = userInput.value.trim();
+
+          if (!query) return;
+
+          // 사용자 메시지 화면에 표시
+          appendMessage("user", query);
+          userInput.value = "";
+
+          try {
+            // 로딩 메시지
+            const loadingId = appendMessage("bot", "답변을 생성 중입니다...");
+
+            // API 요청
+            const response = await fetch(`${API_URL}/chat`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify({ query }),
+              signal: AbortSignal.timeout(30000),
+            });
+
+            // 로딩 메시지 제거
+            removeMessage(loadingId);
+
+            const data = await validateApiResponse(response);
+
+            // 봇 답변 화면에 표시
+            appendMessage("bot", data.answer, data.sources);
+          } catch (error) {
+            console.error("메시지 전송 오류:", error);
+
+            // 로딩 메시지가 있다면 제거
+            const loadingMsg = chatMessages.querySelector(
+              ".message.bot:last-child"
+            );
+            if (
+              loadingMsg &&
+              loadingMsg.textContent.includes("답변을 생성 중")
+            ) {
+              loadingMsg.remove();
+            }
+
+            if (error.message.includes("API 서버가 실행되지 않았거나")) {
+              appendMessage(
+                "bot",
+                "죄송합니다. API 서버에 연결할 수 없습니다. 관리자에게 문의해주세요."
+              );
+            } else {
+              appendMessage("bot", `오류가 발생했습니다: ${error.message}`);
+            }
+          }
+        }
+
+        // 메시지 화면에 추가
+        function appendMessage(type, content, sources = []) {
+          const messageId = `msg-${Date.now()}`;
+          const messageDiv = document.createElement("div");
+          messageDiv.id = messageId;
+          messageDiv.className = `message ${type}`;
+
+          let html = `<div class="message-content">${content}</div>`;
+
+          // 소스 정보 추가
+          if (sources && sources.length > 0) {
+            html += '<div class="sources"><strong>참조 문서:</strong>';
+            sources.forEach((source) => {
+              html += `<div class="source-item">- ${source.title}</div>`;
+            });
+            html += "</div>";
+          }
+
+          messageDiv.innerHTML = html;
+          chatMessages.appendChild(messageDiv);
+
+          // 스크롤을 맨 아래로
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+
+          return messageId;
+        }
+
+        // 메시지 제거
+        function removeMessage(messageId) {
+          const messageDiv = document.getElementById(messageId);
+          if (messageDiv) {
+            messageDiv.remove();
+          }
+        }
+
+        // 파일 크기 포맷팅
+        function formatFileSize(bytes) {
+          if (bytes === 0) return "0 Bytes";
+
+          const k = 1024;
+          const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+          return (
+            parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+          );
+        }
+
+        // 이벤트 리스너
+        sendButton.addEventListener("click", sendMessage);
+
+        userInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            sendMessage();
+          }
+        });
+
+        refreshDocsButton.addEventListener("click", loadDocuments);
+
+        reindexButton.addEventListener("click", reindexDocuments);
+
+        // 주기적으로 서버 상태 체크 (선택사항)
+        setInterval(checkStatus, 30000); // 30초마다 상태 체크
+      });
+    </script>
+  </body>
+</html>
